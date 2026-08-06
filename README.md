@@ -110,8 +110,8 @@ neighbournet-frontend/
 | Day 1 | ✅ Done | Backend init, dependencies, DB connections, `/api/health` verified |
 | Day 2 | ✅ Done | User & Post schemas, `2dsphere` index verified |
 | Day 3-4 | ✅ Done | JWT auth (register, login, protect middleware, `/api/auth/me`) + Google OAuth via Passport.js (account creation, `googleCallback`, tested end-to-end in browser + Atlas) |
-| Day 5-7 | ⏳ Next | Post CRUD APIs, `$near` geospatial feed endpoint, rate limiting, Cloudinary upload, frontend (Vite + React + Tailwind + Leaflet) |
-
+| Day 5-7 | ✅ Done | Post CRUD, `$near` geospatial feed with radius/category/time filters, upvote/downvote/confirm (toggle logic), Redis-backed rate limiting (10 posts/hr per user), Cloudinary image upload — all tested end-to-end |
+| Week 2 | ⏳ Next | Frontend setup (Vite + React + Tailwind + Leaflet + Zustand), Socket.io real-time alerts |
 *(This table gets updated as each day is completed.)*
 
 ---
