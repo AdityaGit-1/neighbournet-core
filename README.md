@@ -1,31 +1,18 @@
-# 🏘️ NeighbourNet — Hyperlocal Community Intelligence Platform
+# NeighbourNet — Hyperlocal Community Intelligence Platform
 
-> **Engineered for High-Concurrency Locality Networks, Real-Time Geo-Routing, and AI-Driven Community Synthesis.**
+Full-stack + AI + real-time project. Built incrementally, day by day, over an **8-week** schedule (2-3 hrs/day) — see note on pace below.
 
-NeighbourNet is an end-to-end full-stack geospatial platform designed to solve urban community fragmentation. It connects residents within specific geographical radiuses (1km - 10km) and pincodes, providing real-time emergency alerts, automated daily locality summaries, civic issue lifecycle tracking, and dynamic gamified leaderboards.
+## Tech Stack
+
+**Backend:** Node.js, Express, MongoDB (Mongoose), Redis (ioredis), Socket.io, Passport (Google OAuth), JWT, Claude API (`@anthropic-ai/sdk`), Cloudinary, node-cron, Helmet
+
+**Frontend:** React 18, Vite, Tailwind CSS + Ant Design, Leaflet.js, Zustand, Axios, Socket.io-client
+
+**Infra:** MongoDB Atlas (M0), Redis Cloud, Render (backend), Vercel (frontend)
 
 ---
 
-## 🏗️ System Architecture Overview
-
-```text
-               +-------------------------------------------+
-               |            React / Leaflet UI             |
-               +--------------------+----------------------+
-                                    |
-                            [REST / WebSockets]
-                                    |
-                                    v
-               +-------------------------------------------+
-               |        Express.js Core Application        |
-               +--+-----------------+-------------------+--+
-                  |                 |                   |
-                  v                 v                   v
-        +-------------------+ +-----------+ +-------------------+
-        |  MongoDB Atlas    | | Redis     | | Claude API        |
-        |  (2dsphere Index) | | (Cache/   | | (Auto-Category &  |
-        |                   | |  ZSETs)   | |  Daily Digest)    |
-        +-------------------+ +-----------+ +-------------------+
+## Architecture
 
 ### Repo layout (monorepo, sibling folders)
 
@@ -115,3 +102,38 @@ neighbournet-frontend/
 ```
 
 ---
+
+## Build Log
+
+| Day | Status | What was built |
+|-----|--------|-----------------|
+| Day 1 | ✅ Done | Backend init, dependencies, `src/config/db.js`, `src/config/redis.js`, `src/app.js`, `server.js`, `.env` setup, MongoDB Atlas + Redis Cloud connected, `/api/health` verified |
+| Day 2 | ⏳ Next | User & Post Mongoose schemas, `2dsphere` geospatial index verified in Atlas |
+
+*(This table gets updated as each day is completed.)*
+
+---
+
+## Notes on pace
+
+The original blueprint scoped this project at **8 weeks** (2-3 hrs/day). We're sticking to that pace rather than a compressed 4-week version — Day 1 alone surfaced several real environment/config issues (file paths, dotenv resolution, URL-encoding a Redis password) that were worth debugging properly rather than rushing past. Any deviation from the structure or schedule above will be called out explicitly when it happens.
+
+---
+
+## Environment Variables
+
+See `.env.example` in `neighbournet-backend/` for the full list. Never commit `.env`.
+
+## Setup
+
+```bash
+# Backend
+cd neighbournet-backend
+npm install
+npm run dev
+
+# Frontend (from Week 1, Days 5-7 onward)
+cd neighbournet-frontend
+npm install
+npm run dev
+```
