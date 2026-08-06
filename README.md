@@ -107,8 +107,10 @@ neighbournet-frontend/
 
 | Day | Status | What was built |
 |-----|--------|-----------------|
-| Day 1 | ✅ Done | Backend init, dependencies, `src/config/db.js`, `src/config/redis.js`, `src/app.js`, `server.js`, `.env` setup, MongoDB Atlas + Redis Cloud connected, `/api/health` verified |
-| Day 2 | ⏳ Next | User & Post Mongoose schemas, `2dsphere` geospatial index verified in Atlas |
+| Day 1 | ✅ Done | Backend init, dependencies, DB connections, `/api/health` verified |
+| Day 2 | ✅ Done | User & Post schemas, `2dsphere` index verified |
+| Day 3-4 (part 1) | ✅ Done | JWT auth — register, login (bcrypt + access/refresh tokens), auth middleware (`protect`), `/api/auth/me` protected route tested |
+| Day 3-4 (part 2) | ⏳ Next | Google OAuth (Passport.js) |
 
 *(This table gets updated as each day is completed.)*
 
