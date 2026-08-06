@@ -106,4 +106,22 @@ const getMe = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe };
+const googleCallback = async (req, res) => {
+  try {
+    const user = req.user; // attached by Passport after successful strategy
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // Redirect to frontend with tokens as query params (frontend will grab and store them)
+    const redirectUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/oauth-success?accessToken=${accessToken}&refreshToken=${refreshToken}`;
+    res.redirect(redirectUrl);
+  } catch (err) {
+    console.error('Google callback error:', err.message);
+    res.redirect(`${process.env.CLIENT_URL || 'http://localhost:5173'}/login?error=oauth_failed`);
+  }
+};
+
+module.exports = { register, login, getMe, googleCallback };

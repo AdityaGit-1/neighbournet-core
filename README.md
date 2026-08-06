@@ -109,8 +109,8 @@ neighbournet-frontend/
 |-----|--------|-----------------|
 | Day 1 | ✅ Done | Backend init, dependencies, DB connections, `/api/health` verified |
 | Day 2 | ✅ Done | User & Post schemas, `2dsphere` index verified |
-| Day 3-4 (part 1) | ✅ Done | JWT auth — register, login (bcrypt + access/refresh tokens), auth middleware (`protect`), `/api/auth/me` protected route tested |
-| Day 3-4 (part 2) | ⏳ Next | Google OAuth (Passport.js) |
+| Day 3-4 | ✅ Done | JWT auth (register, login, protect middleware, `/api/auth/me`) + Google OAuth via Passport.js (account creation, `googleCallback`, tested end-to-end in browser + Atlas) |
+| Day 5-7 | ⏳ Next | Post CRUD APIs, `$near` geospatial feed endpoint, rate limiting, Cloudinary upload, frontend (Vite + React + Tailwind + Leaflet) |
 
 *(This table gets updated as each day is completed.)*
 

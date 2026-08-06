@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
+const passport = require('./config/passport'); // add this
 const authRoutes = require('./routes/auth.routes');
 
 const app = express();
@@ -12,6 +13,7 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan('dev'));
+app.use(passport.initialize()); // add this
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
