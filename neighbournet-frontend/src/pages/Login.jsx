@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 import useAuthStore from '../store/authStore';
 
@@ -41,6 +42,9 @@ function Login() {
         <button type="submit" className="w-full p-2 rounded bg-blue-600 text-white font-semibold">
           Login
         </button>
+        <p className="text-slate-400 text-sm text-center mt-2">
+          Don't have an account? <a href="/register" className="text-blue-400">Register</a>
+        </p>
       </form>
     </div>
   );
