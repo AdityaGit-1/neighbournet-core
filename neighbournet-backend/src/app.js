@@ -6,6 +6,7 @@ const cookieParser = require('cookie-parser');
 const passport = require('./config/passport'); 
 const authRoutes = require('./routes/auth.routes');
 const postRoutes = require('./routes/post.routes');
+const digestRoutes = require('./routes/digest.routes');
 
 const app = express();
 
@@ -22,5 +23,6 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/digest', digestRoutes);
 
 module.exports = app;
