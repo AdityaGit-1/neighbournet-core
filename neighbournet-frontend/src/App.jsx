@@ -10,6 +10,7 @@ import useAuthStore from './store/authStore';
 import useNotifStore from './store/notifStore';
 import api from './services/api';
 import { connectSocket, disconnectSocket } from './services/socket';
+import DigestCard from './components/Digest/DigestCard';
 
 function Home() {
   const { user, logout, accessToken } = useAuthStore();
@@ -21,6 +22,21 @@ function Home() {
   const routerLocation = useLocation();
   const testCenter = [20.2961, 85.8245];
   const testPincode = '751001'; // matches the pincode we've been testing with
+  const [digest, setDigest] = useState(null);
+  const testPincode2 = '751001'; // same test pincode used elsewhere
+
+  const fetchDigest = async () => {
+    try {
+      const res = await api.get(`/digest/${testPincode2}`);
+      setDigest(res.data.digest);
+    } catch (err) {
+      console.error('Failed to fetch digest:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDigest();
+  }, []);
 
   const fetchFeed = async () => {
     try {
@@ -124,6 +140,12 @@ function Home() {
           </button>
         </div>
       </div>
+      
+      {digest && (
+        <div className="w-full max-w-5xl">
+          <DigestCard digest={digest} locality={digest.locality || 'your area'}/>
+        </div>
+      )}
 
       <div className="w-full max-w-5xl">
         <FeedFilter category={category} radius={radius} onCategoryChange={setCategory} onRadiusChange={setRadius} />
