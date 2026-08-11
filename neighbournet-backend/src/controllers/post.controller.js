@@ -1,4 +1,5 @@
 const Post = require('../models/Post');
+const { getIO } = require('../services/socket.service');
 
 const createPost = async (req, res) => {
   try {
@@ -21,6 +22,15 @@ const createPost = async (req, res) => {
       pincode,
       images: images || [],
     });
+
+    // Notify all users in this locality's room in real-time
+    try {
+      const io = getIO();
+      const populatedPost = await post.populate('userId', 'name profilePicture reputationScore');
+      io.to(post.pincode).emit('new-post', populatedPost);
+    } catch (socketErr) {
+      console.error('Socket emit error (non-fatal):', socketErr.message);
+    }
 
     res.status(201).json({ post });
   } catch (err) {

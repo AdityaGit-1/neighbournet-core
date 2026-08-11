@@ -7,15 +7,20 @@ import LocalityMap from './components/Map/LocalityMap';
 import PostCard from './components/Feed/PostCard';
 import FeedFilter from './components/Feed/FeedFilter';
 import useAuthStore from './store/authStore';
+import useNotifStore from './store/notifStore';
 import api from './services/api';
+import { connectSocket, disconnectSocket } from './services/socket';
 
 function Home() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, accessToken } = useAuthStore();
+  const { notifications, unreadCount, addNotification, markAllRead } = useNotifStore();
   const [posts, setPosts] = useState([]);
   const [category, setCategory] = useState('');
   const [radius, setRadius] = useState(5);
+  const [showNotifs, setShowNotifs] = useState(false);
   const routerLocation = useLocation();
   const testCenter = [20.2961, 85.8245];
+  const testPincode = '751001'; // matches the pincode we've been testing with
 
   const fetchFeed = async () => {
     try {
@@ -31,6 +36,26 @@ function Home() {
   useEffect(() => {
     fetchFeed();
   }, [routerLocation.key, category, radius]);
+
+  // Socket connection lifecycle
+  useEffect(() => {
+    const socket = connectSocket(accessToken);
+
+    socket.on('connect', () => {
+      console.log('Socket connected, joining room:', testPincode);
+      socket.emit('join-room', testPincode);
+    });
+
+    socket.on('new-post', (post) => {
+      console.log('Real-time new post received:', post);
+      addNotification(post);
+      fetchFeed(); // refresh feed to show the new post immediately
+    });
+
+    return () => {
+      disconnectSocket();
+    };
+  }, []);
 
   const handleUpvote = async (postId) => {
     try {
@@ -63,7 +88,34 @@ function Home() {
     <div className="min-h-screen bg-slate-900 p-8 flex flex-col items-center gap-6">
       <div className="flex justify-between items-center w-full max-w-5xl">
         <h1 className="text-2xl font-bold text-white">Welcome, {user?.name}</h1>
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotifs(!showNotifs);
+                if (!showNotifs) markAllRead();
+              }}
+              className="relative px-3 py-2 bg-slate-700 text-white rounded"
+            >
+              🔔
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            {showNotifs && (
+              <div className="absolute right-0 mt-2 w-72 bg-slate-800 rounded-lg shadow-lg p-3 space-y-2 max-h-80 overflow-y-auto z-10">
+                {notifications.length === 0 && <p className="text-slate-500 text-sm">No notifications yet</p>}
+                {notifications.map((n) => (
+                  <div key={n.id} className="text-sm text-slate-300 border-b border-slate-700 pb-2">
+                    <strong>{n.post.title}</strong>
+                    <p className="text-slate-500 text-xs">New {n.post.category} post nearby</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <Link to="/create" className="px-4 py-2 bg-green-600 text-white rounded font-semibold">
             + New Post
           </Link>
