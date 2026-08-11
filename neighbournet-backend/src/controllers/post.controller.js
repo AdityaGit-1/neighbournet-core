@@ -1,5 +1,6 @@
 const Post = require('../models/Post');
 const { getIO } = require('../services/socket.service');
+const { categorizeAndScorePost } = require('../services/ai.service');
 
 const createPost = async (req, res) => {
   try {
@@ -9,11 +10,17 @@ const createPost = async (req, res) => {
       return res.status(400).json({ message: 'title, content, category, longitude, latitude, locality, and pincode are required' });
     }
 
+    // AI categorization + spam check — runs before saving so we can flag/store results
+    const aiResult = await categorizeAndScorePost(title, content);
+
     const post = await Post.create({
       userId: req.userId,
       title,
       content,
       category,
+      aiSuggestedCategory: aiResult.suggestedCategory,
+      spamScore: aiResult.spamScore,
+      aiVerified: aiResult.confidence >= 0.7 && !aiResult.isSpam,
       location: {
         type: 'Point',
         coordinates: [parseFloat(longitude), parseFloat(latitude)],
@@ -23,7 +30,6 @@ const createPost = async (req, res) => {
       images: images || [],
     });
 
-    // Notify all users in this locality's room in real-time
     try {
       const io = getIO();
       const populatedPost = await post.populate('userId', 'name profilePicture reputationScore');
@@ -32,7 +38,15 @@ const createPost = async (req, res) => {
       console.error('Socket emit error (non-fatal):', socketErr.message);
     }
 
-    res.status(201).json({ post });
+    res.status(201).json({
+      post,
+      aiInsight: {
+        suggestedCategory: aiResult.suggestedCategory,
+        matchesUserCategory: aiResult.suggestedCategory === category,
+        spamScore: aiResult.spamScore,
+        reasoning: aiResult.reasoning,
+      },
+    });
   } catch (err) {
     console.error('Create post error:', err.message);
     res.status(500).json({ message: 'Server error creating post' });
