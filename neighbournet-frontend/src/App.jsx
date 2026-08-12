@@ -11,6 +11,7 @@ import useNotifStore from './store/notifStore';
 import api from './services/api';
 import { connectSocket, disconnectSocket } from './services/socket';
 import DigestCard from './components/Digest/DigestCard';
+import CivicTracker from './pages/CivicTracker';
 
 function Home() {
   const { user, logout, accessToken } = useAuthStore();
@@ -135,6 +136,9 @@ function Home() {
           <Link to="/create" className="px-4 py-2 bg-green-600 text-white rounded font-semibold">
             + New Post
           </Link>
+          <Link to="/civic" className="px-4 py-2 bg-orange-600 text-white rounded font-semibold">
+            Civic Tracker
+          </Link>
           <button onClick={logout} className="px-4 py-2 bg-red-600 text-white rounded font-semibold">
             Logout
           </button>
@@ -182,6 +186,7 @@ function App() {
         <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
         <Route path="/create" element={isAuthenticated ? <CreatePost /> : <Navigate to="/login" />} />
         <Route path="/" element={isAuthenticated ? <Home /> : <Navigate to="/login" />} />
+        <Route path="/civic" element={isAuthenticated ? <CivicTracker /> : <Navigate to="/login" />} />
       </Routes>
     </BrowserRouter>
   );

@@ -27,4 +27,15 @@ const deleteCache = async (key) => {
   }
 };
 
-module.exports = { getCache, setCache, deleteCache };
+const invalidatePattern = async (pattern) => {
+  try {
+    const keys = await redisClient.keys(pattern);
+    if (keys.length > 0) {
+      await redisClient.del(...keys);
+    }
+  } catch (err) {
+    console.error('Cache invalidate pattern error:', err.message);
+  }
+};
+
+module.exports = { getCache, setCache, deleteCache, invalidatePattern };

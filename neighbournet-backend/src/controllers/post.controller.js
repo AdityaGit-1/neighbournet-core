@@ -1,6 +1,8 @@
 const Post = require('../models/Post');
+const { deleteCache } = require('../services/cache.service');
 const { getIO } = require('../services/socket.service');
 const { categorizeAndScorePost } = require('../services/ai.service');
+const { getCache, setCache } = require('../services/cache.service');
 
 const createPost = async (req, res) => {
   try {
@@ -36,6 +38,13 @@ const createPost = async (req, res) => {
       io.to(post.pincode).emit('new-post', populatedPost);
     } catch (socketErr) {
       console.error('Socket emit error (non-fatal):', socketErr.message);
+    }
+
+    // Invalidate cached feeds — a new post can affect any radius search that includes its location
+    try {
+      await invalidatePattern('feed:*');
+    } catch (invalidateErr) {
+      console.error('Cache invalidation error (non-fatal):', invalidateErr.message);
     }
 
     res.status(201).json({
@@ -74,28 +83,33 @@ const getFeed = async (req, res) => {
       return res.status(400).json({ message: 'longitude and latitude are required' });
     }
 
-    const maxDistanceKm = parseFloat(radius) || 5; // default 5km
+    const maxDistanceKm = parseFloat(radius) || 5;
     const pageLimit = parseInt(limit) || 20;
 
-    // Build the base geospatial query
+    // Cache key: only cache the common case (no cursor, i.e. first page) since
+    // paginated requests are less repeatable and not worth caching individually
+    const cacheKey = !cursor
+      ? `feed:${latitude}:${longitude}:${maxDistanceKm}:${category || 'all'}:${time || 'all'}`
+      : null;
+
+    if (cacheKey) {
+      const cached = await getCache(cacheKey);
+      if (cached) {
+        return res.status(200).json({ ...cached, fromCache: true });
+      }
+    }
+
     const query = {
       location: {
         $near: {
-          $geometry: {
-            type: 'Point',
-            coordinates: [parseFloat(longitude), parseFloat(latitude)],
-          },
-          $maxDistance: maxDistanceKm * 1000, // $maxDistance is in meters
+          $geometry: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+          $maxDistance: maxDistanceKm * 1000,
         },
       },
     };
 
-    // Category filter
-    if (category) {
-      query.category = category;
-    }
+    if (category) query.category = category;
 
-    // Time filter
     if (time === 'today') {
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
@@ -105,27 +119,25 @@ const getFeed = async (req, res) => {
       weekAgo.setDate(weekAgo.getDate() - 7);
       query.createdAt = { $gte: weekAgo };
     }
-    // 'all' or unspecified -> no createdAt filter
 
-    // Cursor pagination: cursor is the _id of the last post seen
     if (cursor) {
       query._id = { $gt: cursor };
     }
 
-    // NOTE: $near already sorts by distance ascending, and combining it with
-    // an additional .sort() is not supported by MongoDB. Cursor pagination
-    // here works on _id, which is acceptable for this scale.
     const posts = await Post.find(query)
       .limit(pageLimit)
       .populate('userId', 'name profilePicture reputationScore');
 
     const nextCursor = posts.length === pageLimit ? posts[posts.length - 1]._id : null;
 
-    res.status(200).json({
-      posts,
-      nextCursor,
-      count: posts.length,
-    });
+    const result = { posts, nextCursor, count: posts.length };
+
+    // Cache only first-page results, 5 min TTL
+    if (cacheKey) {
+      await setCache(cacheKey, result, 5 * 60);
+    }
+
+    res.status(200).json({ ...result, fromCache: false });
   } catch (err) {
     console.error('Get feed error:', err.message);
     res.status(500).json({ message: 'Server error fetching feed' });
@@ -222,4 +234,62 @@ const uploadImage = async (req, res) => {
   }
 };
 
-module.exports = { createPost, getPostById, getFeed, upvotePost, downvotePost, confirmIssue, uploadImage };
+const updateStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const validStatuses = ['open', 'acknowledged', 'in-progress', 'resolved'];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: `status must be one of: ${validStatuses.join(', ')}` });
+    }
+
+    const post = await Post.findById(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (post.category !== 'civic') {
+      return res.status(400).json({ message: 'Only civic issues have a status progression' });
+    }
+
+    post.status = status;
+    await post.save();
+
+    // Invalidate feed cache since status changed
+    try {
+      await invalidatePattern('feed:*');
+    } catch (err) {
+      console.error('Cache invalidation error (non-fatal):', err.message);
+    }
+
+    res.status(200).json({ post });
+  } catch (err) {
+    console.error('Update status error:', err.message);
+    res.status(500).json({ message: 'Server error updating status' });
+  }
+};
+
+const getCivicIssues = async (req, res) => {
+  try {
+    const { longitude, latitude, radius } = req.query;
+    if (!longitude || !latitude) {
+      return res.status(400).json({ message: 'longitude and latitude are required' });
+    }
+
+    const maxDistanceKm = parseFloat(radius) || 5;
+
+    const posts = await Post.find({
+      category: 'civic',
+      location: {
+        $near: {
+          $geometry: { type: 'Point', coordinates: [parseFloat(longitude), parseFloat(latitude)] },
+          $maxDistance: maxDistanceKm * 1000,
+        },
+      },
+    }).populate('userId', 'name profilePicture reputationScore');
+
+    res.status(200).json({ posts, count: posts.length });
+  } catch (err) {
+    console.error('Get civic issues error:', err.message);
+    res.status(500).json({ message: 'Server error fetching civic issues' });
+  }
+};
+
+module.exports = { createPost, getPostById, getFeed, upvotePost, downvotePost, confirmIssue, uploadImage, updateStatus, getCivicIssues };
