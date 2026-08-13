@@ -3,6 +3,7 @@ const { deleteCache } = require('../services/cache.service');
 const { getIO } = require('../services/socket.service');
 const { categorizeAndScorePost } = require('../services/ai.service');
 const { getCache, setCache } = require('../services/cache.service');
+const { adjustReputation, awardResolutionBonus, POINTS } = require('../services/reputation.service');
 
 const createPost = async (req, res) => {
   try {
@@ -31,6 +32,9 @@ const createPost = async (req, res) => {
       pincode,
       images: images || [],
     });
+
+    // Award reputation for creating a post
+    await adjustReputation(req.userId, POINTS.POST_CREATED, pincode);
 
     try {
       const io = getIO();
@@ -154,12 +158,14 @@ const upvotePost = async (req, res) => {
     const alreadyDownvoted = post.downvotes.some((id) => id.toString() === userId);
 
     if (alreadyUpvoted) {
-      // toggle off
       post.upvotes = post.upvotes.filter((id) => id.toString() !== userId);
+      await adjustReputation(post.userId, -POINTS.UPVOTE_RECEIVED, post.pincode); // revoke
     } else {
       post.upvotes.push(userId);
+      await adjustReputation(post.userId, POINTS.UPVOTE_RECEIVED, post.pincode);
       if (alreadyDownvoted) {
         post.downvotes = post.downvotes.filter((id) => id.toString() !== userId);
+        await adjustReputation(post.userId, -POINTS.DOWNVOTE_RECEIVED, post.pincode); // undo the downvote penalty
       }
     }
 
@@ -182,10 +188,13 @@ const downvotePost = async (req, res) => {
 
     if (alreadyDownvoted) {
       post.downvotes = post.downvotes.filter((id) => id.toString() !== userId);
+      await adjustReputation(post.userId, -POINTS.DOWNVOTE_RECEIVED, post.pincode); // revoke penalty
     } else {
       post.downvotes.push(userId);
+      await adjustReputation(post.userId, POINTS.DOWNVOTE_RECEIVED, post.pincode);
       if (alreadyUpvoted) {
         post.upvotes = post.upvotes.filter((id) => id.toString() !== userId);
+        await adjustReputation(post.userId, -POINTS.UPVOTE_RECEIVED, post.pincode);
       }
     }
 
@@ -249,10 +258,15 @@ const updateStatus = async (req, res) => {
       return res.status(400).json({ message: 'Only civic issues have a status progression' });
     }
 
+    const wasResolved = post.status === 'resolved';
     post.status = status;
     await post.save();
 
-    // Invalidate feed cache since status changed
+    // Award resolution bonus only on the transition INTO resolved (not if already resolved)
+    if (status === 'resolved' && !wasResolved) {
+      await awardResolutionBonus(post.userId, post.pincode);
+    }
+
     try {
       await invalidatePattern('feed:*');
     } catch (err) {

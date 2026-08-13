@@ -12,6 +12,7 @@ import api from './services/api';
 import { connectSocket, disconnectSocket } from './services/socket';
 import DigestCard from './components/Digest/DigestCard';
 import CivicTracker from './pages/CivicTracker';
+import Leaderboard from './components/shared/Leaderboard';
 
 function Home() {
   const { user, logout, accessToken } = useAuthStore();
@@ -104,7 +105,12 @@ function Home() {
   return (
     <div className="min-h-screen bg-slate-900 p-8 flex flex-col items-center gap-6">
       <div className="flex justify-between items-center w-full max-w-5xl">
-        <h1 className="text-2xl font-bold text-white">Welcome, {user?.name}</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-white">Welcome, {user?.name}</h1>
+          {user?.badges?.length > 0 && (
+            <p className="text-sm text-slate-400">{user.badges.join(' · ')}</p>
+          )}
+        </div>
         <div className="flex gap-3 items-center">
           <div className="relative">
             <button
@@ -147,9 +153,13 @@ function Home() {
       
       {digest && (
         <div className="w-full max-w-5xl">
-          <DigestCard digest={digest} locality={digest.locality || 'your area'}/>
+          <DigestCard digest={digest} locality={digest.locality || 'your area'} />
         </div>
       )}
+
+      <div className="w-full max-w-5xl">
+        <Leaderboard pincode={testPincode} />
+      </div>
 
       <div className="w-full max-w-5xl">
         <FeedFilter category={category} radius={radius} onCategoryChange={setCategory} onRadiusChange={setRadius} />
